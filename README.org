@@ -1,0 +1,3 @@
+* Resources
+- http://www.paulgraham.com/acl.html
+- http://www.lispworks.com/documentation/HyperSpec/Front/
