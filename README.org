@@ -1,3 +1,16 @@
+* Getting Started
+
+We will be using [Steel Bank Common Lisp](http://www.sbcl.org/), you can get it with Homebrew:
+
+```
+brew install sbcl
+```
+
+Emacs is highly recommended, it has very powerful editing modes for Lisp (I recommend [sly](https://github.com/joaotavora/sly)).
+
+If you are new to Emacs, I recommend [Doom Emacs](https://github.com/hlissner/doom-emacs).
+
 * Resources
 - http://www.paulgraham.com/acl.html
 - http://www.lispworks.com/documentation/HyperSpec/Front/
+- https://www.cs.cmu.edu/Groups/AI/html/cltl/cltl2.html
