@@ -2,9 +2,9 @@
 
 We will be using [Steel Bank Common Lisp](http://www.sbcl.org/), you can get it with Homebrew:
 
-```
+#+begin_src shell
 brew install sbcl
-```
+#+end_src
 
 Emacs is highly recommended, it has very powerful editing modes for Lisp (I recommend [sly](https://github.com/joaotavora/sly)).
 
