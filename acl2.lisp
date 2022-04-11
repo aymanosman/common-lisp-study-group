@@ -1,6 +1,6 @@
 ; The code in this file was mechanically extracted from the TeX
 ; source files of _Ansi Common Lisp_, except for bst-remove and
-; bst-delete and their subroutines, which replace broken versions 
+; bst-delete and their subroutines, which replace broken versions
 ; in the book.
 
 ; If you have questions or comments about this code, or you want
@@ -13,7 +13,7 @@
 
 
 (defun compress (x)
-  (if (consp x) 
+  (if (consp x)
       (compr (car x) 1 (cdr x))
       x))
 
@@ -119,12 +119,12 @@
 (defun tokens (str test start)
   (let ((p1 (position-if test str :start start)))
    (if p1
-       (let ((p2 (position-if #'(lambda (c) 
+       (let ((p2 (position-if #'(lambda (c)
                                   (not (funcall test c)))
                               str :start p1)))
          (cons (subseq str p1 p2)
-               (if p2 
-                   (tokens str test p2) 
+               (if p2
+                   (tokens str test p2)
                    nil)))
        nil)))
 
@@ -144,7 +144,7 @@
     "jul" "aug" "sep" "oct" "nov" "dec"))
 
 (defun parse-month (str)
-  (let ((p (position str month-names 
+  (let ((p (position str month-names
                      :test #'string-equal)))
     (if p
         (+ p 1)
@@ -233,17 +233,17 @@
                             :l (bst-remove-max l))
                  (make-node :elt (node-elt (bst-min r))
                             :r (bst-remove-min r)
-                            :l l)))))) 
+                            :l l))))))
 
 (defun bst-remove-min (bst)
-  (if (null (node-l bst))  
+  (if (null (node-l bst))
       (node-r bst)
       (make-node :elt (node-elt bst)
                  :l   (bst-remove-min (node-l bst))
                  :r   (node-r bst))))
 
 (defun bst-remove-max (bst)
-  (if (null (node-r bst)) 
+  (if (null (node-r bst))
       (node-l bst)
       (make-node :elt (node-elt bst)
                  :l (node-l bst)
@@ -426,7 +426,7 @@
 
 (defun pseudo-cat (file)
   (with-open-file (str file :direction :input)
-    (do ((line (read-line str nil 'eof) 
+    (do ((line (read-line str nil 'eof)
                (read-line str nil 'eof)))
         ((eql line 'eof))
       (format t "~A~%" line))))
@@ -451,7 +451,7 @@
   (setf (bref b (incf (buf-end b))) x))
 
 (defun buf-pop (b)
-  (prog1 
+  (prog1
     (bref b (incf (buf-start b)))
     (setf (buf-used b) (buf-start b)
           (buf-new  b) (buf-end   b))))
@@ -522,7 +522,7 @@
   (with-open-file (s pathname :direction :input)
     (let ((buffer (make-string maxword))
           (pos 0))
-      (do ((c (read-char s nil :eof) 
+      (do ((c (read-char s nil :eof)
               (read-char s nil :eof)))
           ((eql c :eof))
         (if (or (alpha-char-p c) (char= c #\'))
@@ -531,15 +531,15 @@
               (incf pos))
             (progn
               (unless (zerop pos)
-                (see (intern (string-downcase 
+                (see (intern (string-downcase
                                (subseq buffer 0 pos))))
                 (setf pos 0))
               (let ((p (punc c)))
                 (if p (see p)))))))))
-  
+
 (defun punc (c)
   (case c
-    (#\. '|.|) (#\, '|,|) (#\; '|;|) 
+    (#\. '|.|) (#\, '|,|) (#\; '|;|)
     (#\! '|!|) (#\? '|?|) ))
 
 (let ((prev `|.|))
@@ -560,7 +560,7 @@
 
 (defun random-next (prev)
   (let* ((choices (gethash prev *words*))
-         (i (random (reduce #'+ choices 
+         (i (random (reduce #'+ choices
                             :key #'cdr))))
     (dolist (pair choices)
       (if (minusp (decf i (cdr pair)))
@@ -585,7 +585,7 @@
   (let ((d (mag x y z)))
     (values (/ x d) (/ y d) (/ z d))))
 
-(defstruct (point (:conc-name nil))  
+(defstruct (point (:conc-name nil))
   x y z)
 
 (defun distance (p1 p2)
@@ -619,7 +619,7 @@
           (print (color-at x y) p))))))
 
 (defun color-at (x y)
-  (multiple-value-bind (xr yr zr) 
+  (multiple-value-bind (xr yr zr)
                        (unit-vector (- x (x eye))
                                     (- y (y eye))
                                     (- 0 (z eye)))
@@ -646,11 +646,11 @@
     (max 0 (+ (* xr xn) (* yr yn) (* zr zn)))))
 
 
-(defstruct (sphere (:include surface))  
+(defstruct (sphere (:include surface))
   radius center)
 
 (defun defsphere (x y z r c)
-  (let ((s (make-sphere 
+  (let ((s (make-sphere
              :radius r
              :center (make-point :x x :y y :z z)
              :color  c)))
@@ -714,8 +714,8 @@
 
 
 (defun quicksort (vec l r)
-  (let ((i l) 
-        (j r) 
+  (let ((i l)
+        (j r)
         (p (svref vec (round (+ l r) 2))))    ; 1
     (while (<= i j)                           ; 2
       (while (< (svref vec i) p) (incf i))
@@ -788,7 +788,7 @@
             (cdr q) (cdr (cdr q))))
   (car q))
 
-(defun dequeue (q) 
+(defun dequeue (q)
   (pop (car q)))
 
 
@@ -810,27 +810,27 @@
             (let ((l (node-l bst)))
               (if l
                   (bsti obj l <)
-                  (setf (node-l bst) 
+                  (setf (node-l bst)
                         (make-node :elt obj))))
             (let ((r (node-r bst)))
               (if r
                   (bsti obj r <)
-                  (setf (node-r bst) 
+                  (setf (node-r bst)
                         (make-node :elt obj))))))))
 
 ; >>> Replaces bst-delete from book, which was broken.
 
 (defun bst-delete (obj bst <)
   (if (null bst)
-      nil       
+      nil
       (if (eql obj (node-elt bst))
           (del-root bst)
           (progn
             (if (funcall < obj (node-elt bst))
                 (setf (node-l bst) (bst-delete obj (node-l bst) <))
                 (setf (node-r bst) (bst-delete obj (node-r bst) <)))
-            bst)))) 
-  
+            bst))))
+
 (defun del-root (bst)
   (let ((l (node-l bst)) (r (node-r bst)))
     (cond ((null l) r)
@@ -941,7 +941,7 @@
                     :initial-element 1.0s0))
 
 (defun sum-elts (a)
-  (declare (type (simple-array single-float (1000 1000)) 
+  (declare (type (simple-array single-float (1000 1000))
                  a))
   (let ((sum 0.0s0))
     (declare (type single-float sum))
@@ -976,7 +976,7 @@
 
 (defparameter *harbor* nil)
 
-(defstruct ship 
+(defstruct ship
   name flag tons)
 
 (defun enter (n f d)
@@ -987,16 +987,16 @@
   (find n *harbor* :key #'ship-name))
 
 (defun leave (n)
-  (setf *harbor* 
+  (setf *harbor*
         (delete (find-ship n) *harbor*)))
 
 
 (defconstant pool (make-array 1000 :fill-pointer t))
 
-(dotimes (i 1000) 
+(dotimes (i 1000)
   (setf (aref pool i) (make-ship)))
 
-(defconstant harbor (make-hash-table :size 1100 
+(defconstant harbor (make-hash-table :size 1100
                                      :test #'eq))
 
 (defun enter (n f d)
@@ -1020,7 +1020,7 @@
 
 
 (defmacro as (tag content)
-  `(format t "<~(~A~)>~A</~(~A~)>" 
+  `(format t "<~(~A~)>~A</~(~A~)>"
              ',tag ,content ',tag))
 
 (defmacro with (tag &rest body)
@@ -1075,9 +1075,9 @@
   (labels ((rec (curr prev next left)
              (funcall fn curr prev next)
              (when left
-               (rec (car left) 
-                    curr 
-                    (cadr left) 
+               (rec (car left)
+                    curr
+                    (cadr left)
                     (cdr left)))))
     (when lst
       (rec (car lst) nil (cadr lst) (cdr lst)))))
@@ -1173,7 +1173,7 @@
 
 
 (defun match (x y &optional binds)
-  (cond 
+  (cond
    ((eql x y) (values binds t))
    ((assoc x binds) (match (binding x binds) y binds))
    ((assoc y binds) (match x (binding y binds) binds))
@@ -1181,12 +1181,12 @@
    ((var? y) (values (cons (cons y x) binds) t))
    (t
     (when (and (consp x) (consp y))
-      (multiple-value-bind (b2 yes) 
+      (multiple-value-bind (b2 yes)
                            (match (car x) (car y) binds)
         (and yes (match (cdr x) (cdr y) b2)))))))
 
 (defun var? (x)
-  (and (symbolp x) 
+  (and (symbolp x)
        (eql (char (symbol-name x) 0) #\?)))
 
 (defun binding (x binds)
@@ -1212,14 +1212,14 @@
 
 (defun prove-simple (pred args binds)
   (mapcan #'(lambda (r)
-              (multiple-value-bind (b2 yes) 
-                                   (match args (car r) 
+              (multiple-value-bind (b2 yes)
+                                   (match args (car r)
                                           binds)
                 (when yes
-                  (if (cdr r) 
-                      (prove (cdr r) b2) 
+                  (if (cdr r)
+                      (prove (cdr r) b2)
                       (list b2)))))
-          (mapcar #'change-vars 
+          (mapcar #'change-vars
                   (gethash pred *rules*))))
 
 (defun change-vars (r)
@@ -1265,10 +1265,10 @@
 (defmacro parents (v) `(svref ,v 0))
 (defmacro layout (v) `(the simple-vector (svref ,v 1)))
 (defmacro preclist (v) `(svref ,v 2))
- 
+
 (defmacro class (&optional parents &rest props)
   `(class-fn (list ,@parents) ',props))
- 
+
 (defun class-fn (parents props)
   (let* ((all (union (inherit-props parents) props))
          (obj (make-array (+ (length all) 3)
@@ -1277,14 +1277,14 @@
           (layout obj)   (coerce all 'simple-vector)
           (preclist obj) (precedence obj))
     obj))
- 
+
 (defun inherit-props (classes)
   (delete-duplicates
     (mapcan #'(lambda (c)
                 (nconc (coerce (layout c) 'list)
                        (inherit-props (parents c))))
             classes)))
- 
+
 (defun precedence (obj)
   (labels ((traverse (x)
              (cons x
@@ -1293,7 +1293,7 @@
 
 (defun inst (parent)
   (let ((obj (copy-seq parent)))
-    (setf (parents obj)  parent 
+    (setf (parents obj)  parent
           (preclist obj) nil)
     (fill obj :nil :start 3)
     obj))
@@ -1315,7 +1315,7 @@
 (defun lookup (prop obj)
   (let ((off (position prop (layout obj) :test #'eq)))
     (if off (svref obj (+ off 3)) :nil)))
- 
+
 (defun (setf lookup) (val prop obj)
   (let ((off (position prop (layout obj) :test #'eq)))
     (if off
@@ -1333,13 +1333,13 @@
             `(rget ',name obj nil)))
      (defun (setf ,name) (val obj)
        (setf (lookup ',name obj) val))))
- 
+
 (defun run-methods (obj name args)
   (let ((meth (rget name obj nil)))
     (if (not (eq meth :nil))
         (apply meth obj args)
         (error "No ~A method for ~A." name obj))))
- 
+
 (defmacro defmeth (name obj parms &rest body)
   (let ((gobj (gensym)))
     `(let ((,gobj ,obj))
@@ -1387,7 +1387,7 @@
 
 (defun even/odd (ns)
   (loop for n in ns
-        if (evenp n) 
+        if (evenp n)
            collect n into evens
            else collect n into odds
         finally (return (values evens odds))))
@@ -1409,7 +1409,7 @@
     (dolist (s '(positive negative))
       (dolist (f '(short single double long))
         (let ((n (intern (string-upcase
-                           (format nil "~A-~A-~A-float" 
+                           (format nil "~A-~A-~A-float"
                                          m  s  f)))))
           (format t "~30A ~A~%" n (symbol-value n)))))))
 
@@ -1425,12 +1425,12 @@
 
 
 (defmacro with-type (type expr)
-  `(the ,type ,(if (atom expr) 
+  `(the ,type ,(if (atom expr)
                    expr
                    (expand-call type (binarize expr)))))
 
 (defun expand-call (type expr)
-  `(,(car expr) ,@(mapcar #'(lambda (a) 
+  `(,(car expr) ,@(mapcar #'(lambda (a)
                               `(with-type ,type ,a))
                           (cdr expr))))
 
@@ -1444,8 +1444,8 @@
 
 (defmacro with-slotref ((name prop class) &rest body)
   (let ((g (gensym)))
-    `(let ((,g (+ 3 (position ,prop (layout ,class) 
-                              :test #'eq)))) 
+    `(let ((,g (+ 3 (position ,prop (layout ,class)
+                              :test #'eq))))
        (macrolet ((,name (obj) `(svref ,obj ,',g)))
          ,@body))))
 
@@ -1474,7 +1474,7 @@
 ; *** lib ***
 
 
-(defun -abs (n) 
+(defun -abs (n)
   (if (typep n 'complex)
       (sqrt (+ (expt (realpart n) 2) (expt (imagpart n) 2)))
       (if (< n 0) (- n) n)))
@@ -1487,7 +1487,7 @@
         (t           (car args))))
 
 (defun -append (&optional first &rest rest)
-  (if (null rest) 
+  (if (null rest)
       first
       (nconc (copy-list first) (apply #'-append rest))))
 
@@ -1535,9 +1535,9 @@
   (labels ((cl (x)
              (if (atom x)
                  x
-                 (cons (car x) 
+                 (cons (car x)
                        (cl (cdr x))))))
-    (cons (car lst) 
+    (cons (car lst)
           (cl (cdr lst)))))
 
 (defun -copy-tree (tr)
@@ -1550,7 +1550,7 @@
   (multiple-value-bind (dec doc bod) (analyze-body body)
     `(progn
        (setf (fdefinition ',name)
-             #'(lambda ,parms 
+             #'(lambda ,parms
                  ,@dec
                  (block ,(if (atom name) name (second name))
                    ,@bod))
@@ -1595,10 +1595,10 @@
   (typecase x
     (character (and (typep y 'character) (char= x y)))
     (number    (and (eq (type-of x) (type-of y))
-                    (= x y))) 
+                    (= x y)))
     (t         (eq x y))))
 
-(defun -evenp (x) 
+(defun -evenp (x)
   (typecase x
     (integer (= 0 (mod x 2)))
     (t       (error "non-integer argument"))))
@@ -1616,7 +1616,7 @@
                          (if (atom x) x (car x)))
                      parms)
       ,@body)
-    ,@(mapcar #'(lambda (x) 
+    ,@(mapcar #'(lambda (x)
                   (if (atom x) nil (cadr x)))
               parms)))
 (defun -list (&rest elts) (copy-list elts))
@@ -1659,7 +1659,7 @@
   (if rest
       (let ((rest-conc (apply #'-nconc rest)))
         (if (consp lst)
-            (progn (setf (cdr (last lst)) rest-conc) 
+            (progn (setf (cdr (last lst)) rest-conc)
                    lst)
             rest-conc))
       lst))
@@ -1691,8 +1691,8 @@
       first
       (let ((g (gensym)))
         `(let ((,g ,first))
-           (if ,g 
-               ,g 
+           (if ,g
+               ,g
                (-or ,@rest))))))
 
 ; Not in CL, but needed in several definitions here.
@@ -1703,7 +1703,7 @@
       (cons (cons (car lst) (cadr lst))
             (pair (cddr lst)))))
 
-(defun -pairlis (keys vals &optional alist) 
+(defun -pairlis (keys vals &optional alist)
   (unless (= (length keys) (length vals))
     (error "mismatched lengths"))
   (nconc (mapcar #'cons keys vals) alist))
@@ -1736,10 +1736,10 @@
 (defmacro -progn (&rest args) `(let nil ,@args))
 
 (defmacro -psetf (&rest args)
-  (unless (evenp (length args)) 
+  (unless (evenp (length args))
     (error "odd number of arguments"))
   (let* ((pairs (pair args))
-         (syms (mapcar #'(lambda (x) (gensym)) 
+         (syms (mapcar #'(lambda (x) (gensym))
                        pairs)))
     `(let ,(mapcar #'list
                    syms
@@ -1756,14 +1756,14 @@
               ,@(mapcar #'list vars forms)
               (,(car var) (cons ,g ,access)))
          ,set))))
-  
+
 (defun -rem (n m)
   (nth-value 1 (truncate n m)))
 
 (defmacro -rotatef (&rest args)
   `(psetf ,@(mapcan #'list
                     args
-                    (append (cdr args) 
+                    (append (cdr args)
                             (list (car args))))))
 
 (defun -second (x) (cadr x))
@@ -1782,7 +1782,7 @@
          ,set)
        ,@(if args `((setf2 ,@args)) nil))))
 
-(defun -signum (n) 
+(defun -signum (n)
   (if (zerop n) 0 (/ n (abs n))))
 
 (defun -stringp (x) (typep x 'string))
@@ -1800,7 +1800,7 @@
   (let ((g (gensym)))
     `(let ((,g ,arg))
        (cond ,@(mapcar #'(lambda (cl)
-                           `((typep ,g ',(car cl)) 
+                           `((typep ,g ',(car cl))
                              (progn ,@(cdr cl))))
                        clauses)))))
 (defmacro -unless (arg &rest body)
@@ -1818,4 +1818,3 @@
   (or (null rest)
       (and (or (> first (car rest)) (= first (car rest)))
            (apply #'->= rest))))
-
