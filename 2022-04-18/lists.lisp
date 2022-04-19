@@ -97,3 +97,27 @@
 ;;     2: SHORTEST-PATH-AUX returned (A C D)
 ;;   1: SHORTEST-PATH-AUX returned (A C D)
 ;; 0: SHORTEST-PATH-AUX returned (A C D)
+
+
+(defun shorter (g q e)
+  (if (null q)
+      nil
+      (let* ((path (first q))
+             (node (first path)))
+        (if (eql node e)
+            (reverse path)
+            (shorter g
+                     (append (cdr q)
+                             (mapcar (lambda (node)
+                                       (when (eql node e)
+                                         (return-from shorter (reverse (cons node path))))
+                                       (cons node path))
+                                     (cdr (assoc node g))))
+                     e)))))
+
+;; 0: (SHORTER <graph> ((A)) D)
+;;   1: (SHORTER <graph> ((B A) (C A)) D)
+;;     2: (SHORTER <graph> ((C A) (C B A)) D)
+;;     2: SHORTER returned (A C D)
+;;   1: SHORTER returned (A C D)
+;; 0: SHORTER returned (A C D)
