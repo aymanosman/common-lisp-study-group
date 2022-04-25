@@ -1,17 +1,17 @@
-* Getting Started
+# Getting Started
 
 We will be using [[http://www.sbcl.org/][Steel Bank Common Lisp]], you can get it with Homebrew:
 
-#+begin_src shell
+``` shell
 brew install sbcl
-#+end_src
+```
 
 Emacs is highly recommended, it has very powerful editing modes for Lisp (I recommend [[https://github.com/joaotavora/sly][sly]]).
 If you are new to Emacs, I recommend [[https://github.com/hlissner/doom-emacs][Doom Emacs]].
 
 There is a usable extension for VS Code users, check it out [[https://lispcookbook.github.io/cl-cookbook/vscode-alive.html][here]].
 
-* Resources
+# Resources
 - http://www.paulgraham.com/acl.html
 - http://www.lispworks.com/documentation/HyperSpec/Front/
 - https://www.cs.cmu.edu/Groups/AI/html/cltl/cltl2.html
