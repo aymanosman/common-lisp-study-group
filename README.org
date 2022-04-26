@@ -1,4 +1,4 @@
-# Getting Started
+* Getting Started
 
 We will be using [[http://www.sbcl.org/][Steel Bank Common Lisp]], you can get it with Homebrew:
 
@@ -11,11 +11,11 @@ If you are new to Emacs, I recommend [[https://github.com/hlissner/doom-emacs][D
 
 There is a usable extension for VS Code users, check it out [[https://lispcookbook.github.io/cl-cookbook/vscode-alive.html][here]].
 
-# Resources
+* Resources
 - http://www.paulgraham.com/acl.html
 - http://www.lispworks.com/documentation/HyperSpec/Front/
 - https://www.cs.cmu.edu/Groups/AI/html/cltl/cltl2.html
 
-# Interactive Game Development
+* Interactive Game Development
 
-[game](https://user-images.githubusercontent.com/3605049/165154427-45d501b2-f4e9-4767-afbf-00b436d06870.mp4)
+[[https://user-images.githubusercontent.com/3605049/165154427-45d501b2-f4e9-4767-afbf-00b436d06870.mp4][game]]
