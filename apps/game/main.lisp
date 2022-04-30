@@ -10,8 +10,6 @@
 (defvar current-frame 0)
 (defvar explosions nil)
 
-(setf active nil)
-
 (defun draw-explosion (frame pos)
   (let ((width (/ (texture-width explosion) 5))
         (height (/ (texture-height explosion) 5)))
@@ -24,35 +22,47 @@
                         pos
                         +white+))))
 
+(defun center-pos (pos)
+  (make-vector2 :x (- (vector2-x pos) (/ (texture-width explosion) 5 2))
+                :y (- (vector2-y pos) (/ (texture-height explosion) 5 2))))
+
 (defun game-loop ()
   (if (window-should-close) (return-from game-loop))
 
-  (when (and (is-mouse-button-pressed +mouse-left-button+) (not active))
+  (when (and (is-mouse-button-pressed :left) (not active))
     (setf active t)
-    (let ((pos (get-mouse-position)))
-      (push (list 0 pos) explosions)))
+    (push (list 0 (center-pos (get-mouse-position)))
+          explosions))
 
   (when active
     (setf active nil)
     (play-sound boom))
 
-  (with-drawing
-    (clear-background +raywhite+)
-    (dolist (e explosions)
-      (draw-explosion (first e) (second e))
-      (incf (first e))
-      (when (> (first e) 24)
-        (setf explosions (remove e explosions))))
+  (begin-drawing)
 
-    (draw-fps 10 10))
+  (clear-background +raywhite+)
+
+  (dolist (e explosions)
+    (draw-explosion (first e) (second e))
+    (incf (first e))
+    (when (> (first e) 24)
+      (setf explosions (remove e explosions))))
+
+  (draw-fps 10 10)
+
+  (end-drawing)
 
   (game-loop))
 
 (defun main ()
   "Make sure you don't call me inside Emacs!"
-  (with-window (800 450 "raylib")
-    (with-audio-device
-      (set-target-fps 60)
-      (setf boom (load-sound "boom.wav"))
-      (setf explosion (load-texture "explosion.png"))
-      (game-loop))))
+  (init-window 800 450 "raylib")
+  (init-audio-device)
+  (unwind-protect
+       (progn
+         (set-target-fps 30)
+         (setf boom (load-sound "boom.wav"))
+         (setf explosion (load-texture "explosion.png"))
+         (game-loop))
+    (close-audio-device)
+    (close-window)))
