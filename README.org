@@ -18,4 +18,4 @@ There is a usable extension for VS Code users, check it out [[https://lispcookbo
 
 * Interactive Game Development
 
-[[https://user-images.githubusercontent.com/3605049/165154427-45d501b2-f4e9-4767-afbf-00b436d06870.mp4][game]]
+[[https://user-images.githubusercontent.com/3605049/166293618-758e0536-38e1-4ded-8cf9-a3587e6ad434.mov][game]]
