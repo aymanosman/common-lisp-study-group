@@ -3,8 +3,11 @@
 (defvar shader)
 (defvar target)
 (defvar scale)
-(defvar game-screen-width 200)
-(defvar game-screen-height 200)
+(defvar camera)
+(defparameter screen-width 600)
+(defparameter screen-height 600)
+(defparameter game-screen-width 160)
+(defparameter game-screen-height 128)
 (defvar fps 30)
 (defvar boom)
 (defvar explosion)
@@ -21,11 +24,10 @@
 (defun draw-missile (missile)
   (with-slots (start-pos pos) missile
     (destructuring-bind (x y) pos
-      (draw-line (round (first start-pos))
-                 (round (second start-pos))
-                 (round x)
-                 (round y)
-                 +red+))))
+      (draw-line-v (make-vector2 :x (first start-pos)
+                                 :y (second start-pos))
+                   (make-vector2 :x x :y y)
+                   +red+))))
 
 (defun dist-sq (x y)
   (+ (* x x) (* y y)))
@@ -70,19 +72,31 @@
 
 (defun draw-scene ()
   (begin-drawing)
+  (begin-mode-2d camera)
   (clear-background +black+)
   (begin-shader-mode shader)
+  (draw-texture-rec (render-texture-texture target)
+                    (make-rectangle :x 0 :y 0
+                                    :width game-screen-width
+                                    :height (- game-screen-height))
+                    (make-vector2 :x 0 :y 0)
+                    +white+)
+  #+nil
   (draw-texture-pro (render-texture-texture target)
                     (make-rectangle :x 0 :y 0
-                                    :width game-screen-width :height (- game-screen-height))
+                                    :width game-screen-width
+                                    :height (- game-screen-height))
                     (make-rectangle :x 0 :y 0
-                                    :width (* game-screen-width scale)
-                                    :height (* game-screen-height scale))
+                                    ;; :width (* game-screen-width scale)
+                                    :width screen-width
+                                    ;; :height (* game-screen-height scale)
+                                    :height screen-height)
                     (make-vector2 :x 0 :y 0)
                     0.0
                     +white+)
 
   (end-shader-mode)
+  (end-mode-2d)
   (draw-fps 10 10)
   (end-drawing))
 
@@ -138,44 +152,46 @@
 
   (game-loop))
 
+(defun make-city-texture ()
+  (let* ((image (gen-image-color 8 8 +blank+))
+         (image-pointer (alloc-image image))
+         (points #2A((0 0 0 0 1 1 0 0)
+                     (0 0 0 0 1 1 0 0)
+                     (0 0 1 1 1 1 0 0)
+                     (0 0 1 1 1 1 0 0)
+                     (1 1 1 1 1 1 0 0)
+                     (1 1 1 1 1 1 1 1)
+                     (1 1 1 1 1 1 1 1)
+                     (1 1 1 1 1 1 1 1))))
+    (loop :for j :from 0 :to 7
+          :do (loop :for i :from 0 :to 7
+                    :do (when (= 1 (aref points i j))
+                          (image-draw-pixel image-pointer j i +blue+))))
+    (load-texture-from-image image)))
+
+(defun make-camera (scale)
+  (make-camera2d :offset (make-vector2 :x 60 :y 108)
+                 :target (make-vector2 :x 0 :y 0)
+                 :rotation 0.0
+                 :zoom 3))
+
 (defun main ()
   "Make sure you don't call me inside Emacs!"
-  (init-window 400 400 "game")
+  (init-window screen-width screen-height "Defender")
   (init-audio-device)
   (unwind-protect
        (progn
          (set-target-fps fps)
-         (setf scale (max (floor (min (/ 400 game-screen-width)
-                                      (/ 400 game-screen-height))) 1.0))
-         (setf boom (load-sound "boom.wav"))
-         (setf explosion (load-texture "explosion.png"))
-         (setf city-texture
-               (let* ((image (gen-image-color 8 8 +blank+))
-                      (image-pointer (alloc-image image))
-                      (points #2A((0 0 0 0 1 1 0 0)
-                                  (0 0 0 0 1 1 0 0)
-                                  (0 0 1 1 1 1 0 0)
-                                  (0 0 1 1 1 1 0 0)
-                                  (1 1 1 1 1 1 0 0)
-                                  (1 1 1 1 1 1 1 1)
-                                  (1 1 1 1 1 1 1 1)
-                                  (1 1 1 1 1 1 1 1))))
-                 (loop :for j :from 0 :to 7
-                       :do (loop :for i :from 0 :to 7
-                                 :do (when (= 1 (aref points i j))
-                                       (image-draw-pixel image-pointer j i +blue+))))
-                 (load-texture-from-image image)))
+         (setf scale (max (floor (min (/ screen-width game-screen-width)
+                                      (/ screen-height game-screen-height)))
+                          1.0))
+         (setf camera (make-camera scale))
+         (setf city-texture (make-city-texture))
          (setf cities (list 5 50))
          (setf missiles nil)
          (setf game-state :menu)
          (setf target (load-render-texture game-screen-width game-screen-height))
          (setf shader (load-shader-from-memory (cffi:null-pointer) scanline-fragment-shader))
-
-
-         (begin-texture-mode target)
-         (clear-background +black+)
-         (end-texture-mode)
-
          (game-loop))
     ;; (unload-render-texture taget)
     (close-audio-device)
