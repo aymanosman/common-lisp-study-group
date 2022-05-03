@@ -1,8 +1,4 @@
-(defpackage #:main
-  (:use #:common-lisp #:raylib)
-  (:export #:main))
-
-(in-package #:main)
+(in-package :raylib)
 
 (defvar shader)
 (defvar target)
@@ -20,6 +16,8 @@
 (defvar cities)
 (defvar game-state :menu)
 
+(defstruct missile start-pos pos direction)
+
 (defun draw-missile (missile)
   (with-slots (start-pos pos) missile
     (destructuring-bind (x y) pos
@@ -29,11 +27,8 @@
                  (round y)
                  +red+))))
 
-(defun center-pos (pos)
-  (make-vector2 :x (- (vector2-x pos) (/ (texture-width explosion) 5 2))
-                :y (- (vector2-y pos) (/ (texture-height explosion) 5 2))))
-
-(defstruct missile start-pos pos direction)
+(defun dist-sq (x y)
+  (+ (* x x) (* y y)))
 
 (defun add-missile (origin target)
   (let* ((dx (- (vector2-x target) (vector2-x origin)))
@@ -52,9 +47,6 @@
     (destructuring-bind (dx dy) direction
       (incf (first pos) (* missile-speed dx))
       (incf (second pos) (* missile-speed dy)))))
-
-(defun dist-sq (x y)
-  (+ (* x x) (* y y)))
 
 (defun remove-missile (m)
   (setf missiles (remove m missiles)))
@@ -76,83 +68,75 @@
                       (make-vector2 :x city :y (- game-screen-height 8 4))
                       +white+)))
 
+(defun draw-scene ()
+  (begin-drawing)
+  (clear-background +black+)
+  (begin-shader-mode shader)
+  (draw-texture-pro (render-texture-texture target)
+                    (make-rectangle :x 0 :y 0
+                                    :width game-screen-width :height (- game-screen-height))
+                    (make-rectangle :x 0 :y 0
+                                    :width (* game-screen-width scale)
+                                    :height (* game-screen-height scale))
+                    (make-vector2 :x 0 :y 0)
+                    0.0
+                    +white+)
+
+  (end-shader-mode)
+  (draw-fps 10 10)
+  (end-drawing))
+
+(defun draw-menu ()
+  (begin-texture-mode target)
+  (clear-background +black+)
+  (draw-text "Press Space to begin" 10 10 10 +white+)
+  (end-texture-mode))
+
+(defun draw-level ()
+  (begin-texture-mode target)
+  (clear-background +black+)
+  (draw-ground)
+  (draw-cities)
+
+  (dolist (m missiles)
+    (draw-missile m))
+
+  (end-texture-mode))
+
+(defun update-level ()
+  (when (is-key-pressed :r)
+    (setf game-state :menu)
+    (setf missiles nil))
+
+  (dolist (m missiles)
+    (update-missile m)
+
+    (when (or (with-slots (pos) m
+                (>= (second pos) (- game-screen-height 4))))
+      (remove-missile m))))
+
+(defun update-menu ()
+  (when (is-key-pressed :space)
+    (dotimes (n 3)
+      (add-missile (make-vector2 :x (random game-screen-width) :y 0)
+                   (make-vector2 :x (random game-screen-width) :y (- game-screen-height 4))))
+    (setf game-state :level)))
+
 (defun game-loop ()
   (if (window-should-close) (return-from game-loop))
 
   (ecase game-state
     (:menu
+     (update-menu)
+     (draw-menu)
+     (draw-scene))
 
-     ;; press enter -> goto level
-     (when (is-key-pressed :space)
-       (dotimes (n 3)
-         (add-missile (make-vector2 :x (random game-screen-width) :y 0)
-                      (make-vector2 :x (random game-screen-width) :y (- game-screen-height 4))))
-       (setf game-state :level))
-
-     (begin-texture-mode target)
-     (clear-background +black+)
-     (draw-text "Press Space to begin" 10 10 10 +white+)
-     (end-texture-mode)
-
-     (begin-drawing)
-     (clear-background +black+)
-     (begin-shader-mode shader)
-     (draw-texture-pro (render-texture-texture target)
-                       (make-rectangle :x 0 :y 0
-                                       :width game-screen-width :height (- game-screen-height))
-                       (make-rectangle :x 0 :y 0
-                                       :width (* game-screen-width scale)
-                                       :height (* game-screen-height scale))
-                       (make-vector2 :x 0 :y 0)
-                       0.0
-                       +white+)
-
-     (end-shader-mode)
-     (draw-fps 10 10)
-     (end-drawing))
-    ((:level :play)
-
-     (when (is-key-pressed :r)
-       (setf game-state :menu)
-       (setf missiles nil))
-
-     (begin-texture-mode target)
-     (clear-background +black+)
-     (draw-ground)
-     (draw-cities)
-
-     (dolist (m missiles)
-       (draw-missile m)
-       (update-missile m)
-
-       (when (or (with-slots (pos) m
-                   (>= (second pos) (- game-screen-height 4))))
-         (remove-missile m)))
-
-     (end-texture-mode)
-
-     (begin-drawing)
-     (clear-background +black+)
-     (begin-shader-mode shader)
-
-     (draw-texture-pro (render-texture-texture target)
-                       (make-rectangle :x 0 :y 0
-                                       :width game-screen-width :height (- game-screen-height))
-                       (make-rectangle :x 0 :y 0
-                                       :width (* game-screen-width scale)
-                                       :height (* game-screen-height scale))
-                       (make-vector2 :x 0 :y 0)
-                       0.0
-                       +white+)
-
-     (end-shader-mode)
-     (draw-fps 10 10)
-     (end-drawing)))
+    (:level
+     (update-level)
+     (draw-level)
+     (draw-scene)))
 
   (game-loop))
-
-(defun init-cities ()
-  (setf cities (list 5 50)))
 
 (defun main ()
   "Make sure you don't call me inside Emacs!"
@@ -181,32 +165,11 @@
                                  :do (when (= 1 (aref points i j))
                                        (image-draw-pixel image-pointer j i +blue+))))
                  (load-texture-from-image image)))
-         (setf cities (init-cities))
+         (setf cities (list 5 50))
          (setf missiles nil)
          (setf game-state :menu)
          (setf target (load-render-texture game-screen-width game-screen-height))
-         (setf shader (load-shader-from-memory (cffi:null-pointer) "#version 330
-precision mediump float;
-
-in vec2 fragTexCoord;
-in vec4 fragColor;
-
-out vec4 finalColor;
-
-uniform sampler2D texture0;
-uniform vec4 colDiffuse;
-
-void main() {
-    vec3 pixel = texture(texture0, fragTexCoord).rgb;
-
-    // every 3rd pixel should be a scanline
-    float fmin = 0.50;
-    float fmod = mod(gl_FragCoord.y, 3.0);
-    float fstep = fmin + (1.0 - fmin) * fmod;
-
-    // alpha the color by the scanline
-    finalColor = vec4(pixel, fstep);
-}"))
+         (setf shader (load-shader-from-memory (cffi:null-pointer) scanline-fragment-shader))
 
 
          (begin-texture-mode target)
