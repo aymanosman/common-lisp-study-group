@@ -18,6 +18,7 @@
 (defvar missiles nil)
 (defvar missile-speed 1)
 (defvar city-texture)
+(defvar reticle-texture)
 (defvar cities)
 (defvar game-state :menu)
 
@@ -67,13 +68,6 @@
 (defun remove-missile (m)
   (setf missiles (remove m missiles)))
 
-(defun get-game-mouse-position ()
-  (let ((w (get-screen-width))
-        (h (get-screen-height))
-        (pos (get-mouse-position)))
-    (make-vector2 :x (* (/ (vector2-x pos) w) game-screen-width)
-                  :y (* (/ (vector2-y pos) h) game-screen-height))))
-
 (defun update-explosion (e)
   (with-slots (x y r dr) e
     (setf r (+ r (* (get-frame-time) dr)))
@@ -97,7 +91,7 @@
 (defun draw-scene ()
   (begin-drawing)
   (begin-mode-2d camera)
-  (clear-background +black+)
+  (clear-background +purple+)
   (begin-shader-mode shader)
   (draw-texture-rec (render-texture-texture target)
                     (make-rectangle :x 0 :y 0
@@ -105,20 +99,6 @@
                                     :height (- game-screen-height))
                     (make-vector2 :x 0 :y 0)
                     +white+)
-  #+nil
-  (draw-texture-pro (render-texture-texture target)
-                    (make-rectangle :x 0 :y 0
-                                    :width game-screen-width
-                                    :height (- game-screen-height))
-                    (make-rectangle :x 0 :y 0
-                                    ;; :width (* game-screen-width scale)
-                                    :width screen-width
-                                    ;; :height (* game-screen-height scale)
-                                    :height screen-height)
-                    (make-vector2 :x 0 :y 0)
-                    0.0
-                    +white+)
-
   (end-shader-mode)
   (end-mode-2d)
   (draw-fps 10 10)
@@ -130,11 +110,25 @@
   (draw-text "Press Space to begin" 10 10 10 +white+)
   (end-texture-mode))
 
+(defun get-game-mouse-position ()
+  (let ((w (get-screen-width))
+        (h (get-screen-height))
+        (pos (get-mouse-position)))
+    (make-vector2 :x (- (/ (vector2-x pos) scale) (/ 60 scale))
+                  :y (- (/ (vector2-y pos) scale) (/ 108 scale)))))
+
+(defun draw-reticle ()
+  (draw-texture-rec reticle-texture
+                    (make-rectangle :x 0 :y 0 :width 5 :height 5)
+                    (get-game-mouse-position)
+                    +white+))
+
 (defun draw-level ()
   (begin-texture-mode target)
   (clear-background +black+)
   (draw-ground)
   (draw-cities)
+  (draw-reticle)
   (dolist (e enemy-explosions)
     (draw-explosion e))
   (dolist (m missiles)
@@ -204,6 +198,20 @@
                           (image-draw-pixel image-pointer j i +blue+))))
     (load-texture-from-image image)))
 
+(defun make-reticle-texture ()
+  (let* ((image (gen-image-color 5 5 +blank+))
+         (image-pointer (alloc-image image))
+         (points #2A((0 0 1 0 0)
+                     (0 0 1 0 0)
+                     (1 1 0 1 1)
+                     (0 0 1 0 0)
+                     (0 0 1 0 0))))
+    (loop :for j :from 0 :to 4
+          :do (loop :for i :from 0 :to 4
+                    :do (when (= 1 (aref points i j))
+                          (image-draw-pixel image-pointer j i +white+))))
+    (load-texture-from-image image)))
+
 (defun make-camera (scale)
   (make-camera2d :offset (make-vector2 :x 60 :y 108)
                  :target (make-vector2 :x 0 :y 0)
@@ -217,11 +225,13 @@
   (unwind-protect
        (progn
          (set-target-fps fps)
+         (hide-cursor)
          (setf scale (max (floor (min (/ screen-width game-screen-width)
                                       (/ screen-height game-screen-height)))
                           1.0))
          (setf camera (make-camera scale))
          (setf city-texture (make-city-texture))
+         (setf reticle-texture (make-reticle-texture))
          (setf game-state :menu)
          (setup)
          (setf target (load-render-texture game-screen-width game-screen-height))
@@ -229,4 +239,5 @@
          (game-loop))
     ;; (unload-render-texture taget)
     (close-audio-device)
+    (show-cursor)
     (close-window)))
