@@ -13,26 +13,33 @@
 (defvar explosion)
 (defvar active nil)
 (defvar current-frame 0)
+(defvar enemy-missiles nil)
+(defvar player-missiles nil)
 (defvar enemy-explosions nil)
 (defvar player-explosions nil)
-(defvar missiles nil)
 (defvar missile-speed 1)
 (defvar city-texture)
 (defvar reticle-texture)
 (defvar cities)
 (defvar game-state :menu)
 
-(defstruct missile start-pos pos direction)
+(defstruct missile start-pos pos direction target)
 (defstruct explosion x y r dr)
 
-(defun draw-missile (missile)
+(defun draw-enemy-missile (missile)
+  (draw-missile missile +red+))
+
+(defun draw-player-missile (missile)
+  (draw-missile missile +yellow+))
+
+(defun draw-missile (missile &optional (color +red+))
   (with-slots (start-pos pos) missile
     (destructuring-bind (x y) pos
       ;; trail
       (draw-line-v (make-vector2 :x (first start-pos)
                                  :y (second start-pos))
                    (make-vector2 :x x :y y)
-                   +red+)
+                   color)
       ;; head
       (draw-rectangle-rec (make-rectangle :x (- x 1)
                                           :y (- y 1)
@@ -43,30 +50,38 @@
 (defun dist-sq (x y)
   (+ (* x x) (* y y)))
 
-(defun add-missile (origin target)
-  (let* ((dx (- (vector2-x target) (vector2-x origin)))
-         (dy (- (vector2-y target) (vector2-y origin)))
-         (mag (sqrt (dist-sq dx dy)))
-         (unit (list (/ dx mag) (/ dy mag))))
-    (push (make-missile :start-pos (list (vector2-x origin)
-                                         (vector2-y origin))
-                        :pos (list (vector2-x origin)
-                                   (vector2-y origin))
-                        :direction unit)
-          missiles)))
+(defun unit-vector (x1 y1 x2 y2)
+  (let* ((dx (- x2 x1))
+         (dy (- y2 y1))
+         (mag (sqrt (dist-sq dx dy))))
+    (values (/ dx mag) (/ dy mag))))
+
+(defun add-missile (x1 y1 x2 y2)
+  (push (make-missile :start-pos (list x1 y1)
+                      :pos (list x1 y1)
+                      :direction (multiple-value-list (unit-vector x1 y1 x2 y2)))
+        enemy-missiles))
 
 (defun add-random-missile ()
-  (add-missile (make-vector2 :x (random game-screen-width) :y 0)
-               (make-vector2 :x (random game-screen-width) :y (- game-screen-height 4))))
+  (add-missile (random game-screen-width) 0
+               (random game-screen-width) (- game-screen-height 4)))
+
+(defun launch-player-missile ()
+  (let* ((x2 (get-game-mouse-x))
+         (y2 (get-game-mouse-y))
+         (x1 (floor (/ game-screen-width 2)))
+         (y1 (- game-screen-height 4)))
+    (push (make-missile :start-pos (list x1 y1)
+                        :pos (list x1 y1)
+                        :target (list x2 y2)
+                        :direction (multiple-value-list (unit-vector x1 y1 x2 y2)))
+          player-missiles)))
 
 (defun update-missile (m)
   (with-slots (pos direction) m
     (destructuring-bind (dx dy) direction
       (incf (first pos) (* missile-speed dx))
       (incf (second pos) (* missile-speed dy)))))
-
-(defun remove-missile (m)
-  (setf missiles (remove m missiles)))
 
 (defun update-explosion (e)
   (with-slots (x y r dr) e
@@ -110,12 +125,15 @@
   (draw-text "Press Space to begin" 10 10 10 +white+)
   (end-texture-mode))
 
+(defun get-game-mouse-x ()
+  (- (/ (get-mouse-x) scale) (/ 60 scale)))
+
+(defun get-game-mouse-y ()
+  (- (/ (get-mouse-y) scale) (/ 108 scale)))
+
 (defun get-game-mouse-position ()
-  (let ((w (get-screen-width))
-        (h (get-screen-height))
-        (pos (get-mouse-position)))
-    (make-vector2 :x (- (/ (vector2-x pos) scale) (/ 60 scale))
-                  :y (- (/ (vector2-y pos) scale) (/ 108 scale)))))
+  (make-vector2 :x (get-game-mouse-x)
+                :y (get-game-mouse-y)))
 
 (defun draw-reticle ()
   (draw-texture-rec reticle-texture
@@ -128,41 +146,99 @@
   (clear-background +black+)
   (draw-ground)
   (draw-cities)
-  (draw-reticle)
   (dolist (e enemy-explosions)
     (draw-explosion e))
-  (dolist (m missiles)
-    (draw-missile m))
+  (dolist (e player-explosions)
+    (draw-explosion e))
+  (dolist (m enemy-missiles)
+    (draw-enemy-missile m))
+  (dolist (m player-missiles)
+    (draw-player-missile m))
+  (draw-reticle)
   (end-texture-mode))
 
 (defun setup ()
   (setf cities (list 5 50))
-  (setf missiles nil)
+  (setf enemy-missiles nil)
+  (setf player-missiles nil)
   (setf enemy-explosions nil))
+
+(defun update-enemy-explosions ()
+  (dolist (e enemy-explosions)
+    (update-explosion e))
+
+  (setf enemy-explosions (remove-if (lambda (e) (<= (explosion-r e) 0.0)) enemy-explosions)))
+
+(defun update-player-explosions ()
+  (dolist (e player-explosions)
+    (update-explosion e))
+
+  (setf player-explosions (remove-if (lambda (e) (<= (explosion-r e) 0.0)) player-explosions)))
+
+(defun update-enemy-missiles ()
+  (dolist (m enemy-missiles)
+    (update-missile m))
+
+  (setf enemy-missiles
+        (remove-if (lambda (missile)
+                     (with-slots (pos) missile
+                       (when (>= (second pos) (- game-screen-height 4))
+                         (destructuring-bind (x y) pos
+                           (push (make-explosion :x (floor x)
+                                                 :y (floor y)
+                                                 :r 1.0
+                                                 :dr 10.0)
+                                 enemy-explosions))
+                         t)))
+                   enemy-missiles)))
+
+(defun missile-reached-target? (missile)
+  (flet ((dist (v1 v2)
+           (dist-sq (- (first v1) (first v2))
+                    (- (second v1) (second v2)))))
+    (with-slots (pos start-pos) missile
+      (>= (dist start-pos pos)
+          (dist start-pos (missile-target missile))))))
+
+(defun explode-player-missile (missile)
+  (push (with-slots (pos) missile
+          (destructuring-bind (x y) pos
+            (make-explosion :x (floor x)
+                            :y (floor y)
+                            :r 1.0
+                            :dr 10.0)))
+        player-explosions))
+
+(defun update-player-missiles ()
+  (when (is-mouse-button-pressed :left)
+    (launch-player-missile)
+    player-missiles)
+
+  (dolist (m player-missiles)
+    (update-missile m))
+
+  (setf player-missiles
+        (remove-if (lambda (missile)
+                     (when (missile-reached-target? missile)
+                       (explode-player-missile missile)
+                       t))
+                   player-missiles)))
 
 (defun update-level ()
   (when (is-key-pressed :r)
     (setf game-state :menu)
     (setup))
 
-  (dolist (e enemy-explosions)
-    (update-explosion e))
-
-  (setf enemy-explosions (remove-if (lambda (e) (<= (explosion-r e) 0.0)) enemy-explosions))
-
-  (dolist (m missiles)
-    (update-missile m)
-    (with-slots (pos) m
-      (when (>= (second pos) (- game-screen-height 4))
-        (remove-missile m)
-        (destructuring-bind (x y) pos
-          (push (make-explosion :x (floor x) :y (floor y) :r 1.0 :dr 10.0) enemy-explosions))))))
+  (update-enemy-explosions)
+  (update-player-explosions)
+  (update-enemy-missiles)
+  (update-player-missiles))
 
 (defun update-menu ()
   (when (is-key-pressed :space)
     (dotimes (n 3)
-      (add-missile (make-vector2 :x (random game-screen-width) :y 0)
-                   (make-vector2 :x (random game-screen-width) :y (- game-screen-height 4))))
+      (add-missile (random game-screen-width) 0
+                   (random game-screen-width) (- game-screen-height 4)))
     (setf game-state :level)))
 
 (defun game-loop ()
