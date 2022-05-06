@@ -17,35 +17,24 @@
 (defvar player-missiles nil)
 (defvar enemy-explosions nil)
 (defvar player-explosions nil)
-(defvar missile-speed 1)
 (defvar city-texture)
 (defvar reticle-texture)
 (defvar cities)
 (defvar game-state :menu)
 
-(defstruct missile start-pos pos direction target)
-(defstruct explosion x y r dr)
+;; HELPERS
 
-(defun draw-enemy-missile (missile)
-  (draw-missile missile +red+))
+(defun get-game-mouse-x ()
+  (- (/ (get-mouse-x) scale)
+     (/ 60 scale)))
 
-(defun draw-player-missile (missile)
-  (draw-missile missile +yellow+))
+(defun get-game-mouse-y ()
+  (- (/ (get-mouse-y) scale)
+     (/ 108 scale)))
 
-(defun draw-missile (missile &optional (color +red+))
-  (with-slots (start-pos pos) missile
-    (destructuring-bind (x y) pos
-      ;; trail
-      (draw-line-v (make-vector2 :x (first start-pos)
-                                 :y (second start-pos))
-                   (make-vector2 :x x :y y)
-                   color)
-      ;; head
-      (draw-rectangle-rec (make-rectangle :x (- x 1)
-                                          :y (- y 1)
-                                          :width 2
-                                          :height 2)
-                          +white+))))
+(defun get-game-mouse-position ()
+  (make-vector2 :x (- (get-game-mouse-x) 3)
+                :y (- (get-game-mouse-y) 3)))
 
 (defun dist-sq (x y)
   (+ (* x x) (* y y)))
@@ -56,15 +45,46 @@
          (mag (sqrt (dist-sq dx dy))))
     (values (/ dx mag) (/ dy mag))))
 
-(defun add-missile (x1 y1 x2 y2)
-  (push (make-missile :start-pos (list x1 y1)
-                      :pos (list x1 y1)
-                      :direction (multiple-value-list (unit-vector x1 y1 x2 y2)))
-        enemy-missiles))
+;; MODEL
 
-(defun add-random-missile ()
-  (add-missile (random game-screen-width) 0
-               (random game-screen-width) (- game-screen-height 4)))
+(defstruct missile start-pos pos direction target)
+(defstruct explosion x y r dr)
+
+(defun check-collision-missile-explosion (m e)
+  (with-slots (x y r) e
+    (check-collision-circle-rec (make-vector2 :x x :y y)
+                                r
+                                (destructuring-bind (x y) (missile-pos m)
+                                  (make-rectangle :x x
+                                                  :y y
+                                                  :width 2
+                                                  :height 2)))))
+
+(defun missile-reached-target? (missile)
+  (flet ((dist (v1 v2)
+           (dist-sq (- (first v1) (first v2))
+                    (- (second v1) (second v2)))))
+    (with-slots (pos start-pos) missile
+      (>= (dist start-pos pos)
+          (dist start-pos (missile-target missile))))))
+
+;; UPDATE
+
+(defun setup ()
+  (setf cities (list 5 50))
+  (setf enemy-missiles nil)
+  (setf player-missiles nil)
+  (setf enemy-explosions nil))
+
+(defun launch-enemy-missile ()
+  (let ((x1 (random game-screen-width))
+        (y1 0)
+        (x2 (random game-screen-width))
+        (y2  (- game-screen-height 4)))
+    (push (make-missile :start-pos (list x1 y1)
+                        :pos (list x1 y1)
+                        :direction (multiple-value-list (unit-vector x1 y1 x2 y2)))
+          enemy-missiles)))
 
 (defun launch-player-missile ()
   (let* ((x2 (get-game-mouse-x))
@@ -77,91 +97,17 @@
                         :direction (multiple-value-list (unit-vector x1 y1 x2 y2)))
           player-missiles)))
 
-(defun update-missile (m)
+(defun update-missile (m &key (speed 0.5))
   (with-slots (pos direction) m
     (destructuring-bind (dx dy) direction
-      (incf (first pos) (* missile-speed dx))
-      (incf (second pos) (* missile-speed dy)))))
+      (incf (first pos) (* speed dx))
+      (incf (second pos) (* speed dy)))))
 
 (defun update-explosion (e)
   (with-slots (x y r dr) e
     (setf r (+ r (* (get-frame-time) dr)))
     (when (>= r 10.0)
       (setf dr -10.0))))
-
-(defun draw-explosion (e)
-  (with-slots (x y r) e
-    (draw-circle x y (coerce r 'float) +yellow+)))
-
-(defun draw-ground ()
-  (draw-rectangle 0 (- game-screen-height 4) game-screen-width 4 +brown+))
-
-(defun draw-cities ()
-  (dolist (city cities)
-    (draw-texture-rec city-texture
-                      (make-rectangle :x 0 :y 0 :width 8 :height 8)
-                      (make-vector2 :x city :y (- game-screen-height 8 4))
-                      +white+)))
-
-(defun draw-scene ()
-  (begin-drawing)
-  (begin-mode-2d camera)
-  (clear-background +purple+)
-  (begin-shader-mode shader)
-  (draw-texture-rec (render-texture-texture target)
-                    (make-rectangle :x 0 :y 0
-                                    :width game-screen-width
-                                    :height (- game-screen-height))
-                    (make-vector2 :x 0 :y 0)
-                    +white+)
-  (end-shader-mode)
-  (end-mode-2d)
-  (draw-fps 10 10)
-  (end-drawing))
-
-(defun draw-menu ()
-  (begin-texture-mode target)
-  (clear-background +black+)
-  (draw-text "Press Space to begin" 10 10 10 +white+)
-  (end-texture-mode))
-
-(defun get-game-mouse-x ()
-  (- (/ (get-mouse-x) scale) (/ 60 scale)))
-
-(defun get-game-mouse-y ()
-  (- (/ (get-mouse-y) scale) (/ 108 scale)))
-
-(defun get-game-mouse-position ()
-  (make-vector2 :x (get-game-mouse-x)
-                :y (get-game-mouse-y)))
-
-(defun draw-reticle ()
-  (draw-texture-rec reticle-texture
-                    (make-rectangle :x 0 :y 0 :width 5 :height 5)
-                    (get-game-mouse-position)
-                    +white+))
-
-(defun draw-level ()
-  (begin-texture-mode target)
-  (clear-background +black+)
-  (draw-ground)
-  (draw-cities)
-  (dolist (e enemy-explosions)
-    (draw-explosion e))
-  (dolist (e player-explosions)
-    (draw-explosion e))
-  (dolist (m enemy-missiles)
-    (draw-enemy-missile m))
-  (dolist (m player-missiles)
-    (draw-player-missile m))
-  (draw-reticle)
-  (end-texture-mode))
-
-(defun setup ()
-  (setf cities (list 5 50))
-  (setf enemy-missiles nil)
-  (setf player-missiles nil)
-  (setf enemy-explosions nil))
 
 (defun update-enemy-explosions ()
   (dolist (e enemy-explosions)
@@ -176,13 +122,21 @@
   (setf player-explosions (remove-if (lambda (e) (<= (explosion-r e) 0.0)) player-explosions)))
 
 (defun update-enemy-missiles ()
+  (when (is-key-pressed :x)
+    (launch-enemy-missile))
   (dolist (m enemy-missiles)
     (update-missile m))
 
   (setf enemy-missiles
         (remove-if (lambda (missile)
                      (with-slots (pos) missile
-                       (when (>= (second pos) (- game-screen-height 4))
+                       (when (or (>= (second pos) (- game-screen-height 4)) ;; hit ground
+                                 (some (lambda (e)
+                                         (check-collision-missile-explosion missile e))
+                                       enemy-explosions)
+                                 (some (lambda (e)
+                                         (check-collision-missile-explosion missile e))
+                                       player-explosions))
                          (destructuring-bind (x y) pos
                            (push (make-explosion :x (floor x)
                                                  :y (floor y)
@@ -191,14 +145,6 @@
                                  enemy-explosions))
                          t)))
                    enemy-missiles)))
-
-(defun missile-reached-target? (missile)
-  (flet ((dist (v1 v2)
-           (dist-sq (- (first v1) (first v2))
-                    (- (second v1) (second v2)))))
-    (with-slots (pos start-pos) missile
-      (>= (dist start-pos pos)
-          (dist start-pos (missile-target missile))))))
 
 (defun explode-player-missile (missile)
   (push (with-slots (pos) missile
@@ -215,7 +161,7 @@
     player-missiles)
 
   (dolist (m player-missiles)
-    (update-missile m))
+    (update-missile m :speed 3))
 
   (setf player-missiles
         (remove-if (lambda (missile)
@@ -224,7 +170,81 @@
                        t))
                    player-missiles)))
 
-(defun update-level ()
+;; VIEW
+
+(defun draw-frame ()
+  (begin-drawing)
+  (begin-mode-2d camera)
+  (clear-background +purple+)
+  (begin-shader-mode shader)
+  (draw-texture-rec (render-texture-texture target)
+                    (make-rectangle :x 0 :y 0
+                                    :width game-screen-width
+                                    :height (- game-screen-height))
+                    (make-vector2 :x 0 :y 0)
+                    +white+)
+  (end-shader-mode)
+  (end-mode-2d)
+  (draw-fps 10 10)
+  (end-drawing))
+
+(defun menu ()
+  (when (is-key-pressed :space)
+    (dotimes (n 3)
+      (launch-enemy-missile))
+    (setf game-state :level))
+
+  (begin-texture-mode target)
+  (clear-background +black+)
+  (draw-text "Press Space to begin" 10 10 10 +white+)
+  (end-texture-mode)
+
+  (draw-frame))
+
+(defun draw-missile (missile &optional (color +red+))
+  (with-slots (start-pos pos) missile
+    (destructuring-bind (x y) pos
+      ;; trail
+      (draw-line-v (make-vector2 :x (first start-pos)
+                                 :y (second start-pos))
+                   (make-vector2 :x x :y y)
+                   color)
+      ;; head
+      (draw-rectangle-rec (make-rectangle :x (- x 1)
+                                          :y (- y 1)
+                                          :width 2
+                                          :height 2)
+                          +white+))))
+
+(defun draw-enemy-missile (missile)
+  (draw-missile missile +red+))
+
+(defun draw-player-missile (missile)
+  (draw-missile missile +yellow+))
+
+(defun draw-explosion (e)
+  (with-slots (x y r) e
+    (draw-circle x y (coerce r 'float) +yellow+)))
+
+(defun draw-ground ()
+  (draw-rectangle 0 (- game-screen-height 4) game-screen-width 4 +brown+))
+
+(defun draw-cities ()
+  (dolist (city cities)
+    (draw-texture-rec city-texture
+                      (make-rectangle :x 0 :y 0 :width 8 :height 8)
+                      (make-vector2 :x city :y (- game-screen-height 8 4))
+                      +white+)))
+
+(defun draw-reticle ()
+  (draw-texture-rec reticle-texture
+                    (make-rectangle :x 0 :y 0 :width 5 :height 5)
+                    (get-game-mouse-position)
+                    +white+))
+
+;; MAIN
+
+(defun level ()
   (when (is-key-pressed :r)
     (setf game-state :menu)
     (setup))
@@ -232,28 +252,34 @@
   (update-enemy-explosions)
   (update-player-explosions)
   (update-enemy-missiles)
-  (update-player-missiles))
+  (update-player-missiles)
 
-(defun update-menu ()
-  (when (is-key-pressed :space)
-    (dotimes (n 3)
-      (add-missile (random game-screen-width) 0
-                   (random game-screen-width) (- game-screen-height 4)))
-    (setf game-state :level)))
+  (begin-texture-mode target)
+  (clear-background +black+)
+  (draw-ground)
+  (draw-cities)
+  (dolist (e enemy-explosions)
+    (draw-explosion e))
+  (dolist (e player-explosions)
+    (draw-explosion e))
+  (dolist (m enemy-missiles)
+    (draw-enemy-missile m))
+  (dolist (m player-missiles)
+    (draw-player-missile m))
+  (draw-reticle)
+  (end-texture-mode)
+
+  (draw-frame))
 
 (defun game-loop ()
   (if (window-should-close) (return-from game-loop))
 
   (ecase game-state
     (:menu
-     (update-menu)
-     (draw-menu)
-     (draw-scene))
+     (menu))
 
     (:level
-     (update-level)
-     (draw-level)
-     (draw-scene)))
+     (level)))
 
   (game-loop))
 
@@ -294,6 +320,30 @@
                  :rotation 0.0
                  :zoom 3))
 
+(defvar scanline-fragment-shader
+  "#version 330
+precision mediump float;
+
+in vec2 fragTexCoord;
+in vec4 fragColor;
+
+out vec4 finalColor;
+
+uniform sampler2D texture0;
+uniform vec4 colDiffuse;
+
+void main() {
+    vec3 pixel = texture(texture0, fragTexCoord).rgb;
+
+    // every 3rd pixel should be a scanline
+    float fmin = 0.50;
+    float fmod = mod(gl_FragCoord.y, 3.0);
+    float fstep = fmin + (1.0 - fmin) * fmod;
+
+    // alpha the color by the scanline
+    finalColor = vec4(pixel, fstep);
+}")
+
 (defun main ()
   "Make sure you don't call me inside Emacs!"
   (init-window screen-width screen-height "Defender")
@@ -311,9 +361,9 @@
          (setf game-state :menu)
          (setup)
          (setf target (load-render-texture game-screen-width game-screen-height))
-         (setf shader (load-shader-from-memory (cffi:null-pointer) scanline-fragment-shader))
+         (setf shader (load-shader-from-memory (null-pointer) scanline-fragment-shader))
          (game-loop))
-    ;; (unload-render-texture taget)
+    (unload-render-texture target)
     (close-audio-device)
     (show-cursor)
     (close-window)))
