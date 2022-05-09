@@ -21,6 +21,8 @@
 (defvar reticle-texture)
 (defvar cities)
 (defvar game-state :menu)
+(defvar launch-sound)
+(defvar boom-sound)
 
 ;; HELPERS
 
@@ -45,7 +47,7 @@
          (mag (sqrt (dist-sq dx dy))))
     (values (/ dx mag) (/ dy mag))))
 
-;; MODEL
+;;; MODEL
 
 (defstruct missile start-pos pos direction target)
 (defstruct explosion x y r dr)
@@ -68,7 +70,7 @@
       (>= (dist start-pos pos)
           (dist start-pos (missile-target missile))))))
 
-;; UPDATE
+;;; UPDATE
 
 (defun setup ()
   (setf cities (list 5 50))
@@ -95,7 +97,8 @@
                         :pos (list x1 y1)
                         :target (list x2 y2)
                         :direction (multiple-value-list (unit-vector x1 y1 x2 y2)))
-          player-missiles)))
+          player-missiles)
+    (play-sound launch-sound)))
 
 (defun update-missile (m &key (speed 0.5))
   (with-slots (pos direction) m
@@ -142,7 +145,8 @@
                                                  :y (floor y)
                                                  :r 1.0
                                                  :dr 10.0)
-                                 enemy-explosions))
+                                 enemy-explosions)
+                           (play-sound boom-sound))
                          t)))
                    enemy-missiles)))
 
@@ -157,8 +161,7 @@
 
 (defun update-player-missiles ()
   (when (is-mouse-button-pressed :left)
-    (launch-player-missile)
-    player-missiles)
+    (launch-player-missile))
 
   (dolist (m player-missiles)
     (update-missile m :speed 3))
@@ -170,7 +173,7 @@
                        t))
                    player-missiles)))
 
-;; VIEW
+;;; VIEW
 
 (defun draw-frame ()
   (begin-drawing)
@@ -258,14 +261,14 @@
   (clear-background +black+)
   (draw-ground)
   (draw-cities)
-  (dolist (e enemy-explosions)
-    (draw-explosion e))
-  (dolist (e player-explosions)
-    (draw-explosion e))
   (dolist (m enemy-missiles)
     (draw-enemy-missile m))
   (dolist (m player-missiles)
     (draw-player-missile m))
+  (dolist (e enemy-explosions)
+    (draw-explosion e))
+  (dolist (e player-explosions)
+    (draw-explosion e))
   (draw-reticle)
   (end-texture-mode)
 
@@ -344,6 +347,54 @@ void main() {
     finalColor = vec4(pixel, fstep);
 }")
 
+(defun sine-wave (x)
+  (sin x))
+
+(defun square-wave (x)
+  (signum (sin x)))
+
+(defun sawtooth-wave (x)
+  (let ((y (/ x (* 2 pi))))
+    (* 2 (- y (floor (+ y 0.5))))))
+
+(defun noise-wave (x)
+  (* (random 1.0) (signum (sin x))))
+
+(defun sweep (start end)
+  (lambda (x)
+    (- start (* x (- start end)))) )
+
+(defun fade-out-envelope ()
+  (lambda (time)
+    (min 1.0 (max 0.0 (- 1.0 time)))))
+
+(defun float-to-s16 (f)
+  (if (plusp f)
+      (floor (* f (- (expt 2 15) 1)))
+      (floor (* f (expt 2 15)))))
+
+(defun f-wave (f curve sample-rate duration envelope)
+  (let* ((block-align 2)
+         (total-samples (ceiling (* sample-rate duration)))
+         (size (* total-samples block-align))
+         (data (make-array size :element-type '(unsigned-byte 8))))
+    (loop :for i :from 0 :below size :by block-align
+          :do (setf (nibbles:sb16ref/le data i)
+                    (float-to-s16
+                     (* (funcall f (/ (* i pi (funcall curve (/ i size))) sample-rate))
+                        (funcall envelope (/ i size))))))
+
+    data))
+
+(defun make-sound (curve duration instrument envelope)
+  (let ((sample-rate 4000))
+    (load-sound-from-wave
+     (make-wave-from-memory ".wav"
+                            (wav:make-wav :channels 1
+                                          :sample-rate sample-rate
+                                          :bits-per-sample 16
+                                          :data (f-wave instrument curve sample-rate duration envelope))))))
+
 (defun main ()
   "Make sure you don't call me inside Emacs!"
   (init-window screen-width screen-height "Defender")
@@ -358,6 +409,9 @@ void main() {
          (setf camera (make-camera scale))
          (setf city-texture (make-city-texture))
          (setf reticle-texture (make-reticle-texture))
+         (setf launch-sound (make-sound (sweep 600 400) 0.75 #'sawtooth-wave (fade-out-envelope)))
+         (setf boom-sound (make-sound (constantly 50) 1.25 #'noise-wave (fade-out-envelope)))
+
          (setf game-state :menu)
          (setup)
          (setf target (load-render-texture game-screen-width game-screen-height))
