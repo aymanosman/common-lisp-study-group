@@ -1,5 +1,6 @@
 (in-package :raylib)
 
+(defvar frame 0)
 (defvar shader)
 (defvar target)
 (defvar scale)
@@ -225,9 +226,36 @@
 (defun draw-player-missile (missile)
   (draw-missile missile +yellow+))
 
+(defvar +palette+
+  (map 'vector
+       (lambda (color)
+         (make-color :r (first color)
+                     :g (second color)
+                     :b (third color)
+                     :a (fourth color)))
+       '((#x00 #x00 #x00 #xff)
+         (#x1d #x2b #x53 #xff)
+         (#x7e #x25 #x53 #xff)
+         (#x00 #x87 #x51 #xff)
+         (#xab #x52 #x36 #xff)
+         (#x5f #x57 #x4f #xff)
+         (#xc2 #xc3 #xc7 #xff)
+         (#xff #xf1 #xe8 #xff)
+         (#xff #x00 #x4d #xff)
+         (#xff #xa3 #x00 #xff)
+         (#xff #xec #x27 #xff)
+         (#x00 #xe4 #x36 #xff)
+         (#x29 #xad #xff #xff)
+         (#x83 #x76 #x9c #xff)
+         (#xff #x77 #xab #xff)
+         (#xff #xcc #xaa #xff))))
+
+(defun color (n)
+  (aref +palette+ n))
+
 (defun draw-explosion (e)
   (with-slots (x y r) e
-    (draw-circle x y (coerce r 'float) +yellow+)))
+    (draw-circle x y (coerce r 'float) (color (+ 8 (logand frame #x7))))))
 
 (defun draw-ground ()
   (draw-rectangle 0 (- game-screen-height 4) game-screen-width 4 +brown+))
@@ -284,6 +312,7 @@
     (:level
      (level)))
 
+  (incf frame)
   (game-loop))
 
 (defun make-city-texture ()

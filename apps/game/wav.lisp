@@ -1,17 +1,17 @@
 (in-package :nibbles)
 
-(defun sb24ref/le (vector index)
-  (let ((u24 (ub24ref/le vector index)))
-    (if (> u24 (- (expt 2 23) 1))
-        (- u24 (expt 2 24))
-        u24)))
-
 (defun ub24ref/le (vector index)
   (let ((u24 0))
     (setf (ldb (byte 8 0) u24) (aref vector (+ index 0)))
     (setf (ldb (byte 8 8) u24) (aref vector (+ index 1)))
     (setf (ldb (byte 8 16) u24) (aref vector (+ index 2)))
     u24))
+
+(defun sb24ref/le (vector index)
+  (let ((u24 (ub24ref/le vector index)))
+    (if (> u24 (- (expt 2 23) 1))
+        (- u24 (expt 2 24))
+        u24)))
 
 (export '(sb24ref/le ub24ref/le))
 
@@ -31,7 +31,7 @@
 
 (defun wav-write-vector (vector stream)
   (loop :for elem :across vector
-        :do (vector-push-extend elem stream)))
+        :do (vector-push elem stream)))
 
 (defun wav-write-string (string stream)
   (wav-write-vector (map 'vector #'char-code string) stream))
@@ -46,7 +46,8 @@
   (vector-push (ldb (byte 8 16) n) stream)
   (vector-push (ldb (byte 8 24) n) stream))
 
-(defun make-wav (&key (compression-code 1)
+(defun make-wav (&key
+                   (compression-code 1)
                    (channels 1)
                    (sample-rate 44100)
                    (bits-per-sample 16)
@@ -60,7 +61,6 @@
                        8 ;; 'data' + size
                        (length data)))
          (wav-file (make-array file-size
-                               :adjustable nil ;; TODO this is not needed if file size is calculated correctly
                                :fill-pointer 0
                                :element-type '(unsigned-byte 8))))
     (labels ((write-wav-format (stream)
