@@ -137,9 +137,6 @@
                        (when (or (>= (second pos) (- game-screen-height 4)) ;; hit ground
                                  (some (lambda (e)
                                          (check-collision-missile-explosion missile e))
-                                       enemy-explosions)
-                                 (some (lambda (e)
-                                         (check-collision-missile-explosion missile e))
                                        player-explosions))
                          (destructuring-bind (x y) pos
                            (push (make-explosion :x (floor x)
