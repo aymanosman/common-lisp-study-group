@@ -6,6 +6,9 @@
 (ql:quickload :nibbles) ;; for wav.lisp
 
 (load "wav.lisp")
+(load "sound.lisp")
+(load "sprite.lisp")
+(load "font.lisp")
 (load "main.lisp")
 
 (in-package :raylib)

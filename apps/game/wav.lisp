@@ -1,27 +1,5 @@
-(in-package :nibbles)
-
-(defun ub24ref/le (vector index)
-  (let ((u24 0))
-    (setf (ldb (byte 8 0) u24) (aref vector (+ index 0)))
-    (setf (ldb (byte 8 8) u24) (aref vector (+ index 1)))
-    (setf (ldb (byte 8 16) u24) (aref vector (+ index 2)))
-    u24))
-
-(defun sb24ref/le (vector index)
-  (let ((u24 (ub24ref/le vector index)))
-    (if (> u24 (- (expt 2 23) 1))
-        (- u24 (expt 2 24))
-        u24)))
-
-(export '(sb24ref/le ub24ref/le))
-
-(in-package :cl-user)
-
 (defpackage :wav
   (:use :common-lisp)
-  (:import-from #:nibbles
-                #:read-ub16/le
-                #:read-ub32/le)
   (:export #:read-wav
            #:make-wav))
 
@@ -113,18 +91,18 @@
                    (chunk-id (read-bytes 4 stream)))
                (unless (equalp id chunk-id)
                  (error "expected '~a' got ~a" expected-id (coerce-to-string chunk-id)))
-               (let ((size (read-ub32/le stream)))
+               (let ((size (nibbles:read-ub32/le stream)))
                  (when expected-size
                    (unless (= size expected-size)
                      (error "expected chunk size of ~a got ~a" expected-size size)))
                  size)))
            (read-compression-code ()
-             (let ((code (read-ub16/le stream)))
+             (let ((code (nibbles:read-ub16/le stream)))
                (unless (= 1 code)
                  (error "only compression code 1 is supported, got ~a" code))
                code))
            (read-channels ()
-             (let ((channels (read-ub16/le stream)))
+             (let ((channels (nibbles:read-ub16/le stream)))
                (unless (member channels '(1 2))
                  (error "only 1 or 2 channels allowed, got ~a" channels))
                channels))
@@ -133,10 +111,10 @@
                (read-header "fmt " 16)
                (setf compression-code (read-compression-code))
                (setf channels (read-channels))
-               (setf sample-rate (read-ub32/le stream))
-               (setf average-bytes-per-second (read-ub32/le stream))
-               (setf block-align (read-ub16/le stream))
-               (setf bits-per-sample (read-ub16/le stream))
+               (setf sample-rate (nibbles:read-ub32/le stream))
+               (setf average-bytes-per-second (nibbles:read-ub32/le stream))
+               (setf block-align (nibbles:read-ub16/le stream))
+               (setf bits-per-sample (nibbles:read-ub16/le stream))
                (list :compression-code compression-code
                      :channels channels
                      :sample-rate sample-rate
