@@ -26,16 +26,12 @@
 ;; HELPERS
 
 (defun get-game-mouse-x ()
-  (- (/ (get-mouse-x) scale)
-     (/ screen-x-offset scale)))
+  (/ (- (get-mouse-x) screen-x-offset)
+     scale))
 
 (defun get-game-mouse-y ()
-  (- (/ (get-mouse-y) scale)
-     (/ screen-y-offset scale)))
-
-(defun get-game-mouse-position ()
-  (make-vector2 :x (- (get-game-mouse-x) 2)
-                :y (- (get-game-mouse-y) 2)))
+  (/ (- (get-mouse-y) screen-y-offset)
+     scale))
 
 (defun dist-sq (x y)
   (+ (* x x) (* y y)))
@@ -123,7 +119,7 @@
 
 (defun make-enemy-missile (&key x1 y1 mirv (launch-time 0))
   (let ((x1 (or x1 (random game-screen-width)))
-        (y1 (or y1 (- (random (floor game-screen-height 2)))))
+        (y1 (or y1 (- (random (/ game-screen-height 2)))))
         (x2 (or (random-ref (append cities silos))
                 (random game-screen-width)))
         (y2  (- game-screen-height 4)))
@@ -149,7 +145,7 @@
     (let* ((x2 (get-game-mouse-x))
            (y2 (get-game-mouse-y))
            (x1 (closest-silo x2))
-           (y1 (- game-screen-height 4)))
+           (y1 (- game-screen-height 10)))
       (push (make-missile :x1 x1 :y1 y1
                           :x2 x2 :y2 y2
                           :launch-time level-time)
@@ -159,7 +155,6 @@
 
 (defun update-explosion (e)
   (with-slots (x y r dr) e
-    ;; replace get-frame-time with something??
     (setf r (+ r (* (get-frame-time) dr)))
     (when (>= r 10.0)
       (setf dr -10.0))))
@@ -196,8 +191,8 @@
                              ((some (lambda (e)
                                       (check-collision-missile-explosion missile e))
                                     player-explosions)
-                              (push (make-explosion :x (floor x)
-                                                    :y (floor y)
+                              (push (make-explosion :x x
+                                                    :y y
                                                     :r 1.0
                                                     :dr 10.0)
                                     player-explosions)
@@ -221,8 +216,8 @@
                              ((>= y (- game-screen-height 8))
                               (destroy-city x2)
                               (destroy-silo x2)
-                              (push (make-explosion :x (floor x)
-                                                    :y (floor y)
+                              (push (make-explosion :x x
+                                                    :y y
                                                     :r 1.0
                                                     :dr 10.0)
                                     enemy-explosions)
@@ -234,8 +229,8 @@
     (setf enemy-missiles (nconc new-missiles enemy-missiles))))
 
 (defun explode-player-missile (x y)
-  (push (make-explosion :x (floor x)
-                        :y (floor y)
+  (push (make-explosion :x x
+                        :y y
                         :r 1.0
                         :dr 10.0)
         player-explosions)
@@ -395,7 +390,7 @@
 
 (defun draw-explosion (e)
   (with-slots (x y r) e
-    (draw-circle x y (coerce r 'float) (random-color))))
+    (draw-circle (round x) (round y) (coerce r 'float) (random-color))))
 
 (defun draw-ground ()
   (draw-rectangle 0 124 game-screen-width 4 (color 2)))
