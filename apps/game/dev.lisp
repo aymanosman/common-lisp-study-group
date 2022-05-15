@@ -3,7 +3,7 @@
 
 ;; git clone --branch wip https://github.com/aymanosman/cl-raylib.git ~/quicklisp/local-projects/raylib
 (ql:quickload :raylib)
-(ql:quickload :nibbles) ;; for wav.lisp
+(ql:quickload :nibbles)
 
 (load "wav.lisp")
 (load "sound.lisp")

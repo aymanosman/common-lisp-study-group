@@ -21,7 +21,6 @@
 (defvar game-state :menu)
 (defvar launch-sound)
 (defvar boom-sound)
-(defvar font)
 
 ;; HELPERS
 
@@ -313,18 +312,7 @@
 
   (setf game-state :level))
 
-(defun text (x y color text)
-  (loop for x from x below 128 by (font-advance font)
-        for c across text
-        do (when (not (char= #\space c))
-             (let ((tex (aref (font-textures font) (- (char-code c) 33))))
-               (when text
-                 (draw-texture-rec tex
-                                   (make-rectangle :x 0 :y 0
-                                                   :width 4
-                                                   :height (font-height font))
-                                   (make-vector2 :x x :y y)
-                                   color))))))
+
 
 (defun draw (x y color texture)
   (draw-texture-rec texture

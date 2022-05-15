@@ -1,18 +1,56 @@
 (in-package :raylib)
 
-(defstruct font advance height textures)
+(defvar font)
+
+(defstruct font advance width height texture)
+
+(defun make-font-atlas (sprites width height)
+  (let* ((image (gen-image-color (* 10 width) (* 10 height) +blank+))
+         (image-pointer (alloc-image image)))
+    (flet ((make-sprite-texture (sprite x y)
+             (loop :for j :from 0 :below height
+                   :do (loop :for i :from 0 :below width
+                             :do (when (= 1 (aref (aref sprite j) i))
+                                   (image-draw-pixel image-pointer (+ i x) (+ j y) +white+))))))
+
+      (loop for sprite across sprites
+            for i from 0
+            do (multiple-value-bind (row col) (floor i 10)
+                 (make-sprite-texture sprite (* col 8) (* row 6))))
+      (load-texture-from-image image))))
 
 (defun make-font-from-sprites (sprites &key advance)
-  (let* ((line-height 6))
+  (let* ((width 8)
+         (height 6))
     (make-font :advance advance
-               :height line-height
-               :textures (map 'vector
-                              (lambda (sprite)
-                                (make-sprite-texture sprite
-                                                     :width 4
-                                                     :height line-height
-                                                     :color +white+))
-                              sprites))))
+               :width width
+               :height height
+               :texture (make-font-atlas sprites width height))))
+
+(defun debug-font-atlas ()
+  (with-slots (width height texture) font
+    (draw-texture-rec texture
+                      (make-rectangle :x 0 :y 0
+                                      :width (* 10 width)
+                                      :height (* 10 height))
+                      (make-vector2 :x 0 :y 0)
+                      +white+)))
+
+(defun text (x y color text)
+  (with-slots (advance width height texture) font
+    (let (;; TODO hardcoded game-screen-width
+          (max-width 128))
+      (loop for x from x below max-width by (font-advance font)
+            for c across text
+            do (when (not (char= #\space c))
+                 (multiple-value-bind (row col) (floor (- (char-code c) 33) 10) ;; 10 because 10x10 grid
+                   (draw-texture-rec texture
+                                     (make-rectangle :x (* col width)
+                                                     :y (* row height)
+                                                     :width advance
+                                                     :height height)
+                                     (make-vector2 :x x :y y)
+                                     color)))))))
 
 (defvar basic-font
   #(;; !
