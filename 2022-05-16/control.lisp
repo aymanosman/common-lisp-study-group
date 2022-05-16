@@ -24,6 +24,18 @@
 
 
 ;; NOTE understand how macroexpand works
+;; from https://stackoverflow.com/a/16580121/1545549
+;;; Quick-and-dirty macroexpand-all
+(defun macroexpand-all (form)
+  (let ((form (macroexpand form)))
+    (cons (car form) (mapcar #'macroexpand (cdr form)))))
+
+(macroexpand-all '(let ((start 0)
+                        (end 5))
+                   (do ((i start (+ i 1)))
+                       ((> i end) 'done)
+                     (format t "~a ~a~%" i (* i i)))))
+
 (do* ((x 1 (+ x 1))
       (y x x))
      ((> x 5))
