@@ -64,18 +64,30 @@
 
 (defvar *wav-read-buffers* nil)
 
+(defmacro atomic-push (item list)
+  #+sbcl
+  `(sb-ext:atomic-push ,item ,list)
+  #+ecl
+  `(push item list))
+
+(defmacro atomic-pop (list)
+  #+sbcl
+  `(sb-ext:atomic-pop ,list)
+  #+ecl
+  `(pop ,list))
+
 (defun make-wav-read-buffer (size)
   (let ((buf (make-array size :element-type '(unsigned-byte 8))))
-    (sb-ext:atomic-push buf *wav-read-buffers*)
+    (atomic-push buf *wav-read-buffers*)
     buf))
 
 (defun read-bytes (n stream)
   (assert (<= n 128))
-  (let ((buf (or (sb-ext:atomic-pop *wav-read-buffers*)
+  (let ((buf (or (atomic-pop *wav-read-buffers*)
                  (make-wav-read-buffer 128))))
     (read-sequence buf stream :start 0 :end n)
     (prog1 (subseq buf 0 n)
-      (sb-ext:atomic-push buf *wav-read-buffers*))))
+      (atomic-push buf *wav-read-buffers*))))
 
 (defun read-wav (stream)
   (labels ((coerce-to-string (vector)
