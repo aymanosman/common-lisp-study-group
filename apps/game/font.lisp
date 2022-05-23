@@ -7,7 +7,7 @@
 (defun make-font-atlas (sprites width height)
   (let* ((image (gen-image-color (* 10 width) (* 10 height) +blank+))
          (image-pointer (alloc-image image)))
-    (flet ((make-sprite-texture (sprite x y)
+    (flet ((draw-sprite (sprite x y)
              (loop :for j :from 0 :below height
                    :do (loop :for i :from 0 :below width
                              :do (when (= 1 (aref (aref sprite j) i))
@@ -16,7 +16,7 @@
       (loop for sprite across sprites
             for i from 0
             do (multiple-value-bind (row col) (floor i 10)
-                 (make-sprite-texture sprite (* col 8) (* row 6))))
+                 (draw-sprite sprite (* col 8) (* row 6))))
       (load-texture-from-image image))))
 
 (defun make-font-from-sprites (sprites &key advance)
